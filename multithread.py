@@ -82,9 +82,13 @@ def init_hook(conduit):
     @type threads_per_server : Integer
     @param servers_per_repo : Most servers to select for a single repository
     @type servers_per_repo : Integer
+    @param proxy_ip : Proxy IP address
+    @type proxy_ip : String
+    @param proxy_port : Proxy L4 port Number
+    @type proxy_port : Integer
 
     """
-    global verbose, socket_timeout, dl_timeout, max_threads
+    global verbose, socket_timeout, dl_timeout, max_threads, proxy_ip, proxy_port
     global servers_per_repo, threads_per_server
     if hasattr(conduit, 'registerPackageName'):
         conduit.registerPackageName("yum-plugin-multithread")
@@ -95,6 +99,8 @@ def init_hook(conduit):
     threads_per_server = conduit.confInt('main', 'threads_per_server',
                                          default=4)
     servers_per_repo = conduit.confInt('main', 'servers_per_repo', default=4)
+    proxy_ip = conduit.confString('main', 'proxy_ip', default='None')
+    proxy_port = conduit.confInt('main', 'proxy_port', default=0)
 
 def predownload_hook(conduit):
     """
@@ -150,8 +156,7 @@ class MultiThread:
         """
         This is the initiliazer function of the B{L{MultiThread}} class.
         """
-        global max_threads, socket_timeout, dl_timeout
-
+        global max_threads, socket_timeout, dl_timeout, proxy_ip, proxy_port
         self.mc = pycurl.CurlMulti()
         self.url_queue = dict()
         self.npackages = 0
@@ -166,6 +171,9 @@ class MultiThread:
             sc.setopt(pycurl.CONNECTTIMEOUT, socket_timeout)
             sc.setopt(pycurl.TIMEOUT, dl_timeout)
             sc.setopt(pycurl.NOSIGNAL, 1)
+            if proxy_ip != 'None' :
+                sc.setopt(pycurl.PROXY, proxy_ip)
+                sc.setopt(pycurl.PROXYPORT, proxy_port)
             self.mc.handles.append(sc)
 
     def add_package(self, remote, local) :
